@@ -29,7 +29,7 @@ export function EmptyDataset({
       </EmptyHeader>
       <EmptyContent>
         <Button asChild>
-          <Link to="/upload">데이터 업로드</Link>
+          <Link to="/upload">데이터</Link>
         </Button>
       </EmptyContent>
     </Empty>

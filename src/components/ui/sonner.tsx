@@ -1,4 +1,3 @@
-import type * as React from "react"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import {
   CircleCheckIcon,

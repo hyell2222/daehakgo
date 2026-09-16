@@ -76,6 +76,20 @@ export function DashboardPage() {
     >
       <MappingNotice mapped={dataset.mapped} />
 
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        {[
+          { to: "/search", label: "대학별 결과 검색" },
+          { to: "/admission-types", label: "전형별 합격률" },
+          { to: "/regions", label: "지역별 합격률" },
+          { to: "/major-regional", label: "주요·지역 대학" },
+          { to: "/scores", label: "점수별 지원현황" },
+        ].map((item) => (
+          <Button key={item.to} asChild variant="outline" className="justify-start">
+            <Link to={item.to}>{item.label}</Link>
+          </Button>
+        ))}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="총 지원"

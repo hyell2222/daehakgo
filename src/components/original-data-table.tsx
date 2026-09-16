@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react"
 
-import { EmptyDataset } from "@/components/empty-dataset"
-import { PageShell } from "@/components/page-shell"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -17,7 +15,7 @@ import { formatCell, formatNumber } from "@/lib/analytics"
 
 const PAGE_SIZE = 50
 
-export function TablePage() {
+export function OriginalDataTable() {
   const { dataset } = useDataset()
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(0)
@@ -40,14 +38,7 @@ export function TablePage() {
   }, [dataset, query])
 
   if (!dataset) {
-    return (
-      <PageShell
-        title="원본 데이터"
-        description="업로드한 엑셀을 표로 확인할 수 있습니다."
-      >
-        <EmptyDataset description="파일을 올리면 전체 행을 표로 볼 수 있습니다." />
-      </PageShell>
-    )
+    return null
   }
 
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
@@ -58,10 +49,7 @@ export function TablePage() {
   )
 
   return (
-    <PageShell
-      title="원본 데이터"
-      description={`${formatNumber(filteredRows.length)}행을 표시합니다.`}
-    >
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <Input
           value={query}
@@ -69,11 +57,11 @@ export function TablePage() {
             setQuery(event.target.value)
             setPage(0)
           }}
-          placeholder="값으로 검색"
+          placeholder="원본 표에서 값으로 검색"
           className="max-w-sm"
         />
         <p className="text-sm text-muted-foreground">
-          {currentPage + 1} / {pageCount} 페이지
+          {formatNumber(filteredRows.length)}행 · {currentPage + 1} / {pageCount} 페이지
         </p>
         <div className="ml-auto flex gap-2">
           <Button
@@ -128,6 +116,6 @@ export function TablePage() {
           </TableBody>
         </Table>
       </div>
-    </PageShell>
+    </div>
   )
 }

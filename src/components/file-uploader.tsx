@@ -7,7 +7,11 @@ import { isSpreadsheetFile, parseSpreadsheet } from "@/lib/excel"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-export function FileUploader() {
+export function FileUploader({
+  variant = "dropzone",
+}: {
+  variant?: "dropzone" | "compact"
+}) {
   const inputRef = useRef<HTMLInputElement>(null)
   const { setDataset } = useDataset()
   const [isDragging, setIsDragging] = useState(false)
@@ -51,6 +55,32 @@ export function FileUploader() {
     void handleFile(event.dataTransfer.files[0])
   }
 
+  const fileInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+      className="hidden"
+      onChange={onInputChange}
+    />
+  )
+
+  if (variant === "compact") {
+    return (
+      <>
+        {fileInput}
+        <Button
+          type="button"
+          disabled={isReading}
+          onClick={() => inputRef.current?.click()}
+        >
+          <FileSpreadsheetIcon />
+          {isReading ? "읽는 중..." : "엑셀 파일 추가"}
+        </Button>
+      </>
+    )
+  }
+
   return (
     <div
       onDragOver={(event) => {
@@ -79,13 +109,7 @@ export function FileUploader() {
           .xlsx, .xls, .csv 파일을 지원합니다. 첫 번째 시트의 첫 행을 컬럼명으로 읽습니다.
         </p>
       </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
-        className="hidden"
-        onChange={onInputChange}
-      />
+      {fileInput}
       <Button
         type="button"
         disabled={isReading}

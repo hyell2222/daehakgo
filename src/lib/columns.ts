@@ -1,4 +1,6 @@
 export type ColumnKey =
+  | "studentId"
+  | "studentName"
   | "region"
   | "university"
   | "period"
@@ -58,9 +60,10 @@ export type ColumnDef = {
 
 /**
  * 엑셀 첫 행 컬럼 순서. 중복 헤더(표준점수/백분위/등급 등)는 위치 기준으로 구분합니다.
- * 원본 표기의 오탈자(펴준점수, 과목병)도 그대로 받아 들입니다.
  */
 export const COLUMN_DEFS: ColumnDef[] = [
+  { key: "studentId", header: "학번", label: "학번" },
+  { key: "studentName", header: "이름", label: "이름" },
   { key: "region", header: "지역", label: "지역" },
   { key: "university", header: "대학", label: "대학" },
   { key: "period", header: "지원시기", label: "지원시기" },
@@ -96,7 +99,7 @@ export const COLUMN_DEFS: ColumnDef[] = [
   { key: "koreanPercentile", header: "백분위", label: "국어 백분위" },
   { key: "koreanGrade", header: "등급", label: "국어 등급" },
   { key: "mathSection", header: "수학영역", label: "수학영역" },
-  { key: "mathStandard", header: "펴준점수", label: "수학 표준점수" },
+  { key: "mathStandard", header: "표준점수", label: "수학 표준점수" },
   { key: "mathPercentile", header: "백분위", label: "수학 백분위" },
   { key: "mathGrade", header: "등급", label: "수학 등급" },
   { key: "mathGradeExtra", header: "등급", label: "수학 추가등급" },
@@ -105,7 +108,7 @@ export const COLUMN_DEFS: ColumnDef[] = [
   { key: "inquiry1Standard", header: "표준점수", label: "탐구1 표준점수" },
   { key: "inquiry1Percentile", header: "백분위", label: "탐구1 백분위" },
   { key: "inquiry1Grade", header: "등급", label: "탐구1 등급" },
-  { key: "inquiry2Subject", header: "과목병", label: "탐구2 과목" },
+  { key: "inquiry2Subject", header: "과목명", label: "탐구2 과목" },
   { key: "inquiry2Standard", header: "표준점수", label: "탐구2 표준점수" },
   { key: "inquiry2Percentile", header: "백분위", label: "탐구2 백분위" },
   { key: "inquiry2Grade", header: "등급", label: "탐구2 등급" },
@@ -120,16 +123,21 @@ export const COLUMN_LABEL: Record<ColumnKey, string> = Object.fromEntries(
 export function normalizeHeader(value: string) {
   return value
     .replace(/\s+/g, "")
-    .replace("펴준점수", "표준점수")
-    .replace("과목병", "과목명")
 }
 
 export function looksLikeAdmissionHeader(headers: string[]) {
   const normalized = headers.map(normalizeHeader)
-  return (
-    normalized[0] === "지역" &&
-    normalized[1] === "대학" &&
-    normalized.includes("모집단위") &&
-    normalized.includes("최종")
-  )
+  const hasCore = normalized.includes("모집단위") && normalized.includes("최종")
+  const withStudent =
+    normalized[0] === "학번" && (normalized[1] === "이름" || normalized[1] === "성명")
+  const withoutStudent = normalized[0] === "지역" && normalized[1] === "대학"
+  return hasCore && (withStudent || withoutStudent)
+}
+
+export function columnDefsForHeaders(headers: string[]) {
+  const normalized = headers.map(normalizeHeader)
+  if (normalized[0] === "학번") {
+    return COLUMN_DEFS
+  }
+  return COLUMN_DEFS.filter((column) => column.key !== "studentId" && column.key !== "studentName")
 }

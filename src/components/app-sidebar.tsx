@@ -1,11 +1,13 @@
 import type { LucideIcon } from "lucide-react"
 import {
-  BarChart3Icon,
   FileSpreadsheetIcon,
+  GaugeIcon,
   GraduationCapIcon,
+  LandmarkIcon,
   LayoutDashboardIcon,
+  MapPinIcon,
   PercentIcon,
-  Table2Icon,
+  SearchIcon,
 } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
@@ -22,7 +24,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
 } from "@/components/ui/sidebar"
 
 type NavItem = {
@@ -31,27 +32,66 @@ type NavItem = {
   icon: LucideIcon
 }
 
-const analysisItems: NavItem[] = [
+const overviewItems: NavItem[] = [
   { title: "대시보드", to: "/", icon: LayoutDashboardIcon },
-  { title: "지원 현황", to: "/applications", icon: BarChart3Icon },
-  { title: "합격률", to: "/admission", icon: PercentIcon },
+]
+
+const analysisItems: NavItem[] = [
+  { title: "대학별 결과 검색", to: "/search", icon: SearchIcon },
+  { title: "전형별 합격률", to: "/admission-types", icon: PercentIcon },
+  { title: "지역별 합격률", to: "/regions", icon: MapPinIcon },
+  { title: "주요·지역 대학", to: "/major-regional", icon: LandmarkIcon },
+  { title: "점수별 지원현황", to: "/scores", icon: GaugeIcon },
 ]
 
 const dataItems: NavItem[] = [
-  { title: "데이터 업로드", to: "/upload", icon: FileSpreadsheetIcon },
-  { title: "원본 데이터", to: "/table", icon: Table2Icon },
+  { title: "데이터", to: "/upload", icon: FileSpreadsheetIcon },
 ]
+
+function NavGroup({
+  label,
+  items,
+  pathname,
+}: {
+  label: string
+  items: NavItem[]
+  pathname: string
+}) {
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => (
+            <SidebarMenuItem key={item.to}>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.to}
+                tooltip={item.title}
+              >
+                <Link to={item.to}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  )
+}
 
 export function AppSidebar() {
   const location = useLocation()
   const { dataset } = useDataset()
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="none">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip="대학GO">
+            <SidebarMenuButton size="lg" asChild>
               <Link to="/">
                 <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <GraduationCapIcon className="size-4" />
@@ -69,53 +109,13 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>분석</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {analysisItems.map((item) => (
-                <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === item.to}
-                    tooltip={item.title}
-                  >
-                    <Link to={item.to}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>데이터</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {dataItems.map((item) => (
-                <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname === item.to}
-                    tooltip={item.title}
-                  >
-                    <Link to={item.to}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <NavGroup label="개요" items={overviewItems} pathname={location.pathname} />
+        <NavGroup label="분석 결과" items={analysisItems} pathname={location.pathname} />
+        <NavGroup label="데이터" items={dataItems} pathname={location.pathname} />
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="rounded-lg bg-sidebar-accent px-2 py-2 text-xs text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
+        <div className="rounded-lg bg-sidebar-accent px-2 py-2 text-xs text-sidebar-accent-foreground">
           {dataset ? (
             <>
               <p className="truncate font-medium">{dataset.fileName}</p>
@@ -128,7 +128,6 @@ export function AppSidebar() {
           )}
         </div>
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   )
 }

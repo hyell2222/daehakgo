@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx"
 
 import {
-  COLUMN_DEFS,
+  columnDefsForHeaders,
   looksLikeAdmissionHeader,
 } from "@/lib/columns"
 import type { DataRow, Dataset } from "@/lib/dataset"
@@ -44,9 +44,10 @@ export function mapAdmissionColumns(rawHeaders: string[]) {
   const keys: string[] = []
 
   if (mapped) {
-    const count = Math.max(rawHeaders.length, COLUMN_DEFS.length)
+    const defs = columnDefsForHeaders(rawHeaders)
+    const count = Math.max(rawHeaders.length, defs.length)
     for (let index = 0; index < count; index += 1) {
-      const def = COLUMN_DEFS[index]
+      const def = defs[index]
       if (def) {
         columns.push(def.label)
         keys.push(def.key)
