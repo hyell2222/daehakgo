@@ -3,6 +3,7 @@ import * as XLSX from "xlsx"
 import {
   columnDefsForHeaders,
   looksLikeAdmissionHeader,
+  normalizeHeader,
 } from "@/lib/columns"
 import type { DataRow, Dataset } from "@/lib/dataset"
 
@@ -22,20 +23,30 @@ function cellToValue(value: string | number | boolean | Date | null | undefined)
 function resolveHeaderRow(
   table: (string | number | boolean | Date | null)[][],
 ) {
+  const limit = Math.min(6, table.length)
+  for (let index = 0; index < limit; index += 1) {
+    const row = (table[index] ?? []).map((cell) => String(cell ?? "").trim())
+    if (looksLikeAdmissionHeader(row)) {
+      return { headerRow: row, dataStart: index + 1 }
+    }
+  }
+
   const first = (table[0] ?? []).map((cell) => String(cell ?? "").trim())
-  if (looksLikeAdmissionHeader(first)) {
-    return { headerRow: first, dataStart: 1 }
-  }
-
-  const second = (table[1] ?? []).map((cell) => String(cell ?? "").trim())
-  if (looksLikeAdmissionHeader(second)) {
-    return { headerRow: second, dataStart: 2 }
-  }
-
   return {
     headerRow: first.map((label, index) => label || `열 ${index + 1}`),
     dataStart: 1,
   }
+}
+
+function looksLikeRepeatedHeader(record: DataRow, keys: string[]) {
+  const first = normalizeHeader(String(record[keys[0]] ?? ""))
+  const second = normalizeHeader(String(record[keys[1]] ?? ""))
+  return (
+    first === "학번" ||
+    first.includes("지원상황") ||
+    first.includes("교과학습") ||
+    (first === "대학" && second.startsWith("지역"))
+  )
 }
 
 export function mapAdmissionColumns(rawHeaders: string[]) {
@@ -116,9 +127,16 @@ export async function parseSpreadsheet(file: File): Promise<Dataset> {
       keys.forEach((key, index) => {
         record[key] = cellToValue(row[index])
       })
+      if (isBlank(record.period) && !isBlank(record.admissionKind)) {
+        record.period = record.admissionKind
+      }
       return record
     })
-    .filter((record) => Object.values(record).some((value) => !isBlank(value)))
+    .filter(
+      (record) =>
+        Object.values(record).some((value) => !isBlank(value)) &&
+        !looksLikeRepeatedHeader(record, keys),
+    )
 
   if (!rows.length) {
     throw new Error("데이터 행이 없습니다. 헤더와 데이터가 있는 파일을 올려 주세요.")

@@ -106,7 +106,8 @@ export function FileUploader({
           {isReading ? "파일을 읽는 중입니다..." : "엑셀 파일을 끌어다 놓으세요"}
         </p>
         <p className="max-w-md text-sm text-muted-foreground">
-          .xlsx, .xls, .csv 파일을 지원합니다. 첫 번째 시트의 첫 행을 컬럼명으로 읽습니다.
+          .xlsx, .xls, .csv 파일을 지원합니다. 수시/학생부/수능 병합 헤더가 있어도 컬럼 행을 찾아
+          읽습니다.
         </p>
       </div>
       {fileInput}

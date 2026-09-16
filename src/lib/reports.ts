@@ -1,10 +1,13 @@
 import type { DataRow } from "@/lib/dataset"
 import { getString } from "@/lib/dataset"
 import {
+  classifyResult,
   isEnrolled,
   isFinalPass,
   isStage1Pass,
+  isWaitlist,
   parseNumber,
+  scoreStats,
 } from "@/lib/analytics"
 import {
   fiveGradeRangeLabel,
@@ -169,10 +172,77 @@ export function rowGpaBand(row: DataRow) {
 export type RateRow = {
   group: string
   name: string
+  people: number
+  applications: number
+  stage1: number
+  passed: number
+  waitlist: number
+  enrolled: number
+  rate: number
+}
+
+export type StudentStatus = "진학" | "합격 미등록" | "예비" | "불합격" | "결과 대기"
+
+export type StudentOutcome = {
+  id: string
+  name: string
+  status: StudentStatus
+  duplicatePass: boolean
+  enrolledUniversity: string
+  enrolledMajor: string
+  applications: number
+  passes: number
+  gpa: number | null
+  percentile: number | null
+}
+
+export type CutoffRow = {
+  university: string
+  admissionName: string
+  typeLabel: string
+  kind: CollegeKind
   applications: number
   passed: number
   enrolled: number
   rate: number
+  gpaAvg: number | null
+  gpaBest: number | null
+  gpaCutoff: number | null
+  percentileAvg: number | null
+}
+
+function csatPercentile(row: DataRow) {
+  const values = [parseNumber(row.koreanPercentile), parseNumber(row.mathPercentile)].filter(
+    (value): value is number => value !== null,
+  )
+  if (!values.length) {
+    return null
+  }
+  return values.reduce((sum, value) => sum + value, 0) / values.length
+}
+
+function firstNumber(rows: DataRow[], read: (row: DataRow) => number | null) {
+  for (const row of rows) {
+    const value = read(row)
+    if (value !== null) {
+      return value
+    }
+  }
+  return null
+}
+
+function averageNumber(values: Array<number | null>) {
+  const nums = values.filter((value): value is number => value !== null)
+  if (!nums.length) {
+    return null
+  }
+  return nums.reduce((sum, value) => sum + value, 0) / nums.length
+}
+
+function typeLabelOf(row: DataRow) {
+  return classifyCollegeKind(row) === "전문대"
+    ? classifyJuniorRound(row)
+    : classifyFourYearType(row)
 }
 
 function toRateRow(group: string, name: string, list: DataRow[]): RateRow {
@@ -180,25 +250,141 @@ function toRateRow(group: string, name: string, list: DataRow[]): RateRow {
   return {
     group,
     name,
+    people: uniqueStudentIds(list),
     applications: list.length,
+    stage1: list.filter(isStage1Pass).length,
     passed,
+    waitlist: list.filter(isWaitlist).length,
     enrolled: list.filter(isEnrolled).length,
     rate: list.length === 0 ? 0 : passed / list.length,
   }
 }
 
 function subtotal(group: string, rows: RateRow[]): RateRow {
+  const people = rows.reduce((sum, row) => sum + row.people, 0)
   const applications = rows.reduce((sum, row) => sum + row.applications, 0)
+  const stage1 = rows.reduce((sum, row) => sum + row.stage1, 0)
   const passed = rows.reduce((sum, row) => sum + row.passed, 0)
+  const waitlist = rows.reduce((sum, row) => sum + row.waitlist, 0)
   const enrolled = rows.reduce((sum, row) => sum + row.enrolled, 0)
   return {
     group,
     name: "소계",
+    people,
     applications,
+    stage1,
     passed,
+    waitlist,
     enrolled,
     rate: applications === 0 ? 0 : passed / applications,
   }
+}
+
+function studentStatusOf(list: DataRow[]): StudentStatus {
+  if (list.some(isEnrolled)) {
+    return "진학"
+  }
+  if (list.some(isFinalPass)) {
+    return "합격 미등록"
+  }
+  if (list.some(isWaitlist)) {
+    return "예비"
+  }
+  if (
+    list.length > 0 &&
+    list.every((row) => classifyResult(getString(row, "finalResult")) === "fail")
+  ) {
+    return "불합격"
+  }
+  return "결과 대기"
+}
+
+export function studentOutcomes(rows: DataRow[]): StudentOutcome[] {
+  const groups = new Map<string, DataRow[]>()
+  rows.forEach((row) => {
+    const id = studentIdOf(row) || `행:${groups.size + 1}`
+    const list = groups.get(id) ?? []
+    list.push(row)
+    groups.set(id, list)
+  })
+
+  return [...groups.entries()]
+    .map(([id, list]) => {
+      const enrolledRow = list.find(isEnrolled)
+      const passes = list.filter(isFinalPass).length
+      return {
+        id,
+        name: getString(list[0], "studentName"),
+        status: studentStatusOf(list),
+        duplicatePass: passes >= 2,
+        enrolledUniversity: enrolledRow ? getString(enrolledRow, "university") : "",
+        enrolledMajor: enrolledRow ? getString(enrolledRow, "major") : "",
+        applications: list.length,
+        passes,
+        gpa: firstNumber(list, (row) => parseNumber(row.gpaAll)),
+        percentile: firstNumber(list, csatPercentile),
+      }
+    })
+    .sort((a, b) => a.id.localeCompare(b.id, "ko") || a.name.localeCompare(b.name, "ko"))
+}
+
+export function overviewReport(rows: DataRow[]) {
+  const students = studentOutcomes(rows)
+  const people = students.length
+  const enrolledPeople = students.filter((student) => student.status === "진학").length
+  const passedUnenrolled = students.filter((student) => student.status === "합격 미등록").length
+  const duplicates = students.filter((student) => student.duplicatePass).length
+  return {
+    people,
+    avgApplications: people === 0 ? 0 : rows.length / people,
+    enrolledPeople,
+    enrollPeopleRate: people === 0 ? 0 : enrolledPeople / people,
+    unplacedPeople: people - enrolledPeople,
+    passedUnenrolled,
+    duplicates,
+    duplicateRate: people === 0 ? 0 : duplicates / people,
+  }
+}
+
+export function cutoffReport(rows: DataRow[]): CutoffRow[] {
+  const groups = new Map<string, DataRow[]>()
+  rows.forEach((row) => {
+    const university = getString(row, "university") || "(대학 미상)"
+    const admissionName = getString(row, "admissionName") || "(전형 미상)"
+    const kind = classifyCollegeKind(row)
+    const typeLabel = typeLabelOf(row)
+    const key = `${university}::${admissionName}::${kind}::${typeLabel}`
+    const list = groups.get(key) ?? []
+    list.push(row)
+    groups.set(key, list)
+  })
+
+  return [...groups.entries()]
+    .map(([key, list]) => {
+      const [university, admissionName, kind, typeLabel] = key.split("::")
+      const passedRows = list.filter(isFinalPass)
+      const passed = passedRows.length
+      const gpa = scoreStats(passedRows, "gpaAll")
+      return {
+        university,
+        admissionName,
+        typeLabel,
+        kind: kind as CollegeKind,
+        applications: list.length,
+        passed,
+        enrolled: list.filter(isEnrolled).length,
+        rate: list.length === 0 ? 0 : passed / list.length,
+        gpaAvg: gpa?.avg ?? null,
+        gpaBest: gpa?.best ?? null,
+        gpaCutoff: gpa?.cutoff ?? null,
+        percentileAvg: averageNumber(passedRows.map(csatPercentile)),
+      }
+    })
+    .sort(
+      (a, b) =>
+        a.university.localeCompare(b.university, "ko") ||
+        a.admissionName.localeCompare(b.admissionName, "ko"),
+    )
 }
 
 export function admissionTypeReport(rows: DataRow[]) {

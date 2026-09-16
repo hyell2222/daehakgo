@@ -1,24 +1,141 @@
 import { useMemo, useState } from "react"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { useDataset } from "@/context/dataset-context"
 import { formatCell, formatNumber } from "@/lib/analytics"
+import {
+  COLUMN_ACCENT_CLASS,
+  COLUMN_GROUP_META,
+  consecutiveSpans,
+  excelColumnsForDataset,
+  type ColumnGroupId,
+  type ExcelColumnView,
+} from "@/lib/columns"
+import { cn } from "@/lib/utils"
 
-const PAGE_SIZE = 50
+function groupClass(group: ColumnGroupId, kind: "header" | "sub" | "cell") {
+  const meta = COLUMN_GROUP_META[group]
+  if (kind === "header") {
+    return meta.headerClass
+  }
+  if (kind === "sub") {
+    return meta.subHeaderClass
+  }
+  return meta.cellClass
+}
+
+function headClass(column: ExcelColumnView) {
+  if (column.accent) {
+    return COLUMN_ACCENT_CLASS[column.accent].head
+  }
+  return groupClass(column.group, "sub")
+}
+
+function cellClass(column: ExcelColumnView) {
+  if (column.accent) {
+    return COLUMN_ACCENT_CLASS[column.accent].cell
+  }
+  return groupClass(column.group, "cell")
+}
+
+function ExcelHeader({ columns }: { columns: ExcelColumnView[] }) {
+  const groups = consecutiveSpans(columns, (column) => column.group)
+  const subgroups = consecutiveSpans(
+    columns,
+    (column) => `${column.group}::${column.subgroup}`,
+  )
+
+  return (
+    <thead className="sticky top-0 z-30">
+      <tr>
+        <th
+          rowSpan={3}
+          className="w-12 min-w-12 border-r border-b bg-zinc-100 px-2 text-center text-xs font-semibold text-zinc-600"
+        >
+          #
+        </th>
+        {groups.map((span, index) => {
+          const group = span.key as ColumnGroupId
+          return (
+            <th
+              key={`group-${group}-${index}`}
+              colSpan={span.count}
+              className={cn(
+                "border-b border-r px-0 py-1.5 text-left text-sm font-semibold tracking-tight",
+                groupClass(group, "header"),
+              )}
+            >
+              <span className="sticky left-14 inline-block px-3">
+                {COLUMN_GROUP_META[group].title}
+              </span>
+            </th>
+          )
+        })}
+      </tr>
+      <tr>
+        {subgroups.map((span, index) => {
+          const [group, subgroup] = span.key.split("::") as [ColumnGroupId, string]
+          return (
+            <th
+              key={`sub-${span.key}-${index}`}
+              colSpan={span.count}
+              className={cn(
+                "border-b border-r px-0 py-1 text-left text-[11px] font-medium",
+                groupClass(group, "sub"),
+              )}
+            >
+              <span className="sticky left-14 inline-block px-3">
+                {subgroup || "\u00a0"}
+              </span>
+            </th>
+          )
+        })}
+      </tr>
+      <tr>
+        {columns.map((column) => (
+          <th
+            key={`col-${column.key}`}
+            className={cn(
+              "border-b border-r px-2 py-1.5 text-center text-[11px] font-semibold whitespace-nowrap",
+              headClass(column),
+            )}
+          >
+            {column.header}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  )
+}
+
+function SimpleHeader({ columns }: { columns: string[] }) {
+  return (
+    <thead className="sticky top-0 z-30">
+      <tr>
+        <th className="w-12 min-w-12 border-b bg-background px-2 text-left text-xs font-medium">
+          #
+        </th>
+        {columns.map((column, index) => (
+          <th
+            key={`${column}-${index}`}
+            className="border-b bg-background px-2 py-2 text-left text-xs font-medium whitespace-nowrap"
+          >
+            {column}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  )
+}
 
 export function OriginalDataTable() {
   const { dataset } = useDataset()
   const [query, setQuery] = useState("")
-  const [page, setPage] = useState(0)
+
+  const columns = useMemo(
+    () => (dataset ? excelColumnsForDataset(dataset.keys, dataset.columns) : []),
+    [dataset],
+  )
 
   const filteredRows = useMemo(() => {
     if (!dataset) {
@@ -41,80 +158,63 @@ export function OriginalDataTable() {
     return null
   }
 
-  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
-  const currentPage = Math.min(page, pageCount - 1)
-  const visibleRows = filteredRows.slice(
-    currentPage * PAGE_SIZE,
-    currentPage * PAGE_SIZE + PAGE_SIZE,
-  )
+  const grouped = dataset.mapped
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <Input
           value={query}
-          onChange={(event) => {
-            setQuery(event.target.value)
-            setPage(0)
-          }}
-          placeholder="원본 표에서 값으로 검색"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="학번, 이름, 대학, 전형명으로 검색"
           className="max-w-sm"
         />
         <p className="text-sm text-muted-foreground">
-          {formatNumber(filteredRows.length)}행 · {currentPage + 1} / {pageCount} 페이지
+          {formatNumber(filteredRows.length)}행 · {formatNumber(dataset.columns.length)}열
         </p>
-        <div className="ml-auto flex gap-2">
-          <Button
-            variant="outline"
-            disabled={currentPage === 0}
-            onClick={() => setPage((value) => Math.max(0, value - 1))}
-          >
-            이전
-          </Button>
-          <Button
-            variant="outline"
-            disabled={currentPage >= pageCount - 1}
-            onClick={() => setPage((value) => value + 1)}
-          >
-            다음
-          </Button>
-        </div>
       </div>
 
-      <div className="rounded-xl border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-16">#</TableHead>
-              {dataset.columns.map((column, index) => (
-                <TableHead key={`${dataset.keys[index]}-${index}`}>{column}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visibleRows.length ? (
-              visibleRows.map((row, index) => (
-                <TableRow key={`${currentPage}-${index}`}>
-                  <TableCell className="text-muted-foreground">
-                    {currentPage * PAGE_SIZE + index + 1}
-                  </TableCell>
-                  {dataset.keys.map((key) => (
-                    <TableCell key={key}>{formatCell(row[key])}</TableCell>
-                  ))}
-                </TableRow>
+      <div className="max-h-[min(72vh,820px)] min-w-0 overflow-auto rounded-xl border">
+        <table className="w-max min-w-full border-separate border-spacing-0 text-xs">
+          {grouped ? <ExcelHeader columns={columns} /> : <SimpleHeader columns={dataset.columns} />}
+          <tbody>
+            {filteredRows.length ? (
+              filteredRows.map((row, index) => (
+                <tr key={index} className="hover:brightness-[0.97]">
+                  <td className="border-b border-r bg-zinc-50 px-2 py-1.5 text-center text-muted-foreground">
+                    {index + 1}
+                  </td>
+                  {grouped
+                    ? columns.map((column) => (
+                        <td
+                          key={column.key}
+                          className={cn(
+                            "border-b border-r px-2 py-1.5 whitespace-nowrap",
+                            cellClass(column),
+                          )}
+                        >
+                          {formatCell(row[column.key])}
+                        </td>
+                      ))
+                    : dataset.keys.map((key) => (
+                        <td key={key} className="border-b px-2 py-1.5 whitespace-nowrap">
+                          {formatCell(row[key])}
+                        </td>
+                      ))}
+                </tr>
               ))
             ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={dataset.columns.length + 1}
+              <tr>
+                <td
+                  colSpan={(grouped ? columns.length : dataset.columns.length) + 1}
                   className="h-24 text-center text-muted-foreground"
                 >
                   검색 결과가 없습니다.
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
     </div>
   )

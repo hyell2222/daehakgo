@@ -130,6 +130,7 @@ export function createSampleDataset(): Dataset {
       COLUMN_DEFS.forEach((column) => {
         row[column.key] = values[column.key] ?? ""
       })
+      row.period = period
       rows.push(row)
     }
   }

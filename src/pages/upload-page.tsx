@@ -27,6 +27,7 @@ export function UploadPage() {
 
   return (
     <PageShell
+      wide
       title="데이터"
       description="엑셀을 올리면 분석에 쓰이고, 같은 화면에서 원본 표도 확인할 수 있습니다."
       actions={
@@ -66,12 +67,14 @@ export function UploadPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="min-w-0">
             <CardHeader>
               <CardTitle>원본 데이터</CardTitle>
-              <CardDescription>업로드한 엑셀을 그대로 펼쳐 봅니다.</CardDescription>
+              <CardDescription>
+                엑셀과 같이 수시 지원, 학생부, 수능 성적 순으로 묶어서 보여 줍니다.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="min-w-0">
               <OriginalDataTable />
             </CardContent>
           </Card>
@@ -91,12 +94,14 @@ export function UploadPage() {
             <CardHeader>
               <CardTitle>업로드 안내</CardTitle>
               <CardDescription>
-                첫 번째 시트의 첫 행을 헤더로 읽습니다. 중복되는 표준점수·백분위·등급은 국어/수학/탐구
-                위치대로 구분합니다.
+                위쪽에 수시/학생부/수능 병합 헤더가 있어도, 학번·이름·대학이 있는 컬럼 행을 찾아
+                읽습니다. 중복되는 표준점수·백분위·등급은 국어/수학/탐구 위치대로 구분합니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>인식하는 컬럼 순서: {COLUMN_DEFS.map((column) => column.header).join(", ")}</p>
+              <p>
+                인식하는 컬럼 순서: {COLUMN_DEFS.map((column) => column.header).join(", ")}
+              </p>
               <p>xlsx, xls, csv를 지원하며 파일 크기는 20MB 이하입니다.</p>
             </CardContent>
           </Card>

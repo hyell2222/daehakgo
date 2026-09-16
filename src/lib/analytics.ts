@@ -69,6 +69,10 @@ export function isStage1Pass(row: DataRow) {
   return classifyResult(getString(row, "stage1")) === "pass"
 }
 
+export function isWaitlist(row: DataRow) {
+  return classifyResult(getString(row, "finalResult")) === "waitlist"
+}
+
 export function isEnrolled(row: DataRow) {
   return classifyEnroll(getString(row, "enroll")) === "enrolled"
 }
@@ -190,6 +194,13 @@ export function formatScore(value: number, digits = 2) {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits,
   })
+}
+
+export function formatScoreDash(value: number | null | undefined, digits = 2) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "—"
+  }
+  return formatScore(value, digits)
 }
 
 export function formatDateTime(value: string) {
