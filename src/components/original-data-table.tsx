@@ -65,9 +65,7 @@ function ExcelHeader({ columns }: { columns: ExcelColumnView[] }) {
                 groupClass(group, "header"),
               )}
             >
-              <span className="sticky left-14 inline-block px-3">
-                {COLUMN_GROUP_META[group].title}
-              </span>
+              <span className="inline-block px-3">{COLUMN_GROUP_META[group].title}</span>
             </th>
           )
         })}
@@ -84,9 +82,7 @@ function ExcelHeader({ columns }: { columns: ExcelColumnView[] }) {
                 groupClass(group, "sub"),
               )}
             >
-              <span className="sticky left-14 inline-block px-3">
-                {subgroup || "\u00a0"}
-              </span>
+              <span className="inline-block px-3">{subgroup || "\u00a0"}</span>
             </th>
           )
         })}
@@ -108,32 +104,12 @@ function ExcelHeader({ columns }: { columns: ExcelColumnView[] }) {
   )
 }
 
-function SimpleHeader({ columns }: { columns: string[] }) {
-  return (
-    <thead className="sticky top-0 z-30">
-      <tr>
-        <th className="w-12 min-w-12 border-b bg-background px-2 text-left text-xs font-medium">
-          #
-        </th>
-        {columns.map((column, index) => (
-          <th
-            key={`${column}-${index}`}
-            className="border-b bg-background px-2 py-2 text-left text-xs font-medium whitespace-nowrap"
-          >
-            {column}
-          </th>
-        ))}
-      </tr>
-    </thead>
-  )
-}
-
 export function OriginalDataTable() {
   const { dataset } = useDataset()
   const [query, setQuery] = useState("")
 
   const columns = useMemo(
-    () => (dataset ? excelColumnsForDataset(dataset.keys, dataset.columns) : []),
+    () => (dataset ? excelColumnsForDataset(dataset.keys) : []),
     [dataset],
   )
 
@@ -146,19 +122,17 @@ export function OriginalDataTable() {
       return dataset.rows
     }
     return dataset.rows.filter((row) =>
-      dataset.keys.some((key) =>
-        String(row[key] ?? "")
+      columns.some((column) =>
+        String(row[column.key] ?? "")
           .toLowerCase()
           .includes(keyword),
       ),
     )
-  }, [dataset, query])
+  }, [columns, dataset, query])
 
-  if (!dataset) {
+  if (!dataset || !columns.length) {
     return null
   }
-
-  const grouped = dataset.mapped
 
   return (
     <div className="min-w-0 space-y-3">
@@ -170,13 +144,13 @@ export function OriginalDataTable() {
           className="max-w-sm"
         />
         <p className="text-sm text-muted-foreground">
-          {formatNumber(filteredRows.length)}행 · {formatNumber(dataset.columns.length)}열
+          {formatNumber(filteredRows.length)}행 · {formatNumber(columns.length)}열
         </p>
       </div>
 
       <div className="max-h-[min(72vh,820px)] min-w-0 overflow-auto rounded-xl border">
         <table className="w-max min-w-full border-separate border-spacing-0 text-xs">
-          {grouped ? <ExcelHeader columns={columns} /> : <SimpleHeader columns={dataset.columns} />}
+          <ExcelHeader columns={columns} />
           <tbody>
             {filteredRows.length ? (
               filteredRows.map((row, index) => (
@@ -184,29 +158,23 @@ export function OriginalDataTable() {
                   <td className="border-b border-r bg-zinc-50 px-2 py-1.5 text-center text-muted-foreground">
                     {index + 1}
                   </td>
-                  {grouped
-                    ? columns.map((column) => (
-                        <td
-                          key={column.key}
-                          className={cn(
-                            "border-b border-r px-2 py-1.5 whitespace-nowrap",
-                            cellClass(column),
-                          )}
-                        >
-                          {formatCell(row[column.key])}
-                        </td>
-                      ))
-                    : dataset.keys.map((key) => (
-                        <td key={key} className="border-b px-2 py-1.5 whitespace-nowrap">
-                          {formatCell(row[key])}
-                        </td>
-                      ))}
+                  {columns.map((column) => (
+                    <td
+                      key={column.key}
+                      className={cn(
+                        "border-b border-r px-2 py-1.5 whitespace-nowrap",
+                        cellClass(column),
+                      )}
+                    >
+                      {formatCell(row[column.key])}
+                    </td>
+                  ))}
                 </tr>
               ))
             ) : (
               <tr>
                 <td
-                  colSpan={(grouped ? columns.length : dataset.columns.length) + 1}
+                  colSpan={columns.length + 1}
                   className="h-24 text-center text-muted-foreground"
                 >
                   검색 결과가 없습니다.

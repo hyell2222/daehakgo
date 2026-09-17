@@ -97,6 +97,7 @@ export function createSampleDataset(): Dataset {
         gpaKorMathEngSocSci: round(gpa - 0.1),
         gpaKorMathEngSoc: round(gpa - 0.05),
         gpaKorEngSci: round(gpa + 0.08),
+        englishGrade: grade,
         gpaKorMathEng: round(gpa - 0.12),
         gpaKorean: round(gpa - 0.2),
         gpaMath: round(gpa + 0.15),
@@ -112,7 +113,6 @@ export function createSampleDataset(): Dataset {
         mathStandard: 116 + student,
         mathPercentile: percentile - 1,
         mathGrade: grade,
-        mathGradeExtra: grade,
         inquirySection: track === "자연" ? "과탐" : "사탐",
         inquiry1Subject: track === "자연" ? "지구과학I" : "생활과윤리",
         inquiry1Standard: 62 + (student % 5),
@@ -122,6 +122,7 @@ export function createSampleDataset(): Dataset {
         inquiry2Standard: 60 + (student % 4),
         inquiry2Percentile: percentile - 3,
         inquiry2Grade: Math.min(5, grade + 1),
+        historyGrade: grade,
         inquiry3Subject: "",
         inquiry3Grade: "",
       }
@@ -130,7 +131,6 @@ export function createSampleDataset(): Dataset {
       COLUMN_DEFS.forEach((column) => {
         row[column.key] = values[column.key] ?? ""
       })
-      row.period = period
       rows.push(row)
     }
   }

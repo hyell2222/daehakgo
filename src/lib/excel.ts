@@ -2,6 +2,7 @@ import * as XLSX from "xlsx"
 
 import {
   columnDefsForHeaders,
+  isKnownColumnKey,
   looksLikeAdmissionHeader,
   normalizeHeader,
 } from "@/lib/columns"
@@ -56,18 +57,10 @@ export function mapAdmissionColumns(rawHeaders: string[]) {
 
   if (mapped) {
     const defs = columnDefsForHeaders(rawHeaders)
-    const count = Math.max(rawHeaders.length, defs.length)
-    for (let index = 0; index < count; index += 1) {
-      const def = defs[index]
-      if (def) {
-        columns.push(def.label)
-        keys.push(def.key)
-      } else {
-        const extra = rawHeaders[index]?.trim() || `열 ${index + 1}`
-        columns.push(extra)
-        keys.push(`extra_${index}`)
-      }
-    }
+    defs.forEach((def) => {
+      columns.push(def.label)
+      keys.push(def.key)
+    })
     return { columns, keys, mapped: true }
   }
 
@@ -119,23 +112,22 @@ export async function parseSpreadsheet(file: File): Promise<Dataset> {
   }
 
   const { columns, keys, mapped } = mapAdmissionColumns(headerRow)
+  const knownKeys = keys.filter(isKnownColumnKey)
+  const knownColumns = knownKeys.map((key) => columns[keys.indexOf(key)] ?? key)
 
   const rows: DataRow[] = table
     .slice(dataStart)
     .map((row) => {
       const record: DataRow = {}
-      keys.forEach((key, index) => {
+      knownKeys.forEach((key, index) => {
         record[key] = cellToValue(row[index])
       })
-      if (isBlank(record.period) && !isBlank(record.admissionKind)) {
-        record.period = record.admissionKind
-      }
       return record
     })
     .filter(
       (record) =>
         Object.values(record).some((value) => !isBlank(value)) &&
-        !looksLikeRepeatedHeader(record, keys),
+        !looksLikeRepeatedHeader(record, knownKeys),
     )
 
   if (!rows.length) {
@@ -147,8 +139,8 @@ export async function parseSpreadsheet(file: File): Promise<Dataset> {
     uploadedAt: new Date().toISOString(),
     sheetName,
     sheetNames: workbook.SheetNames,
-    columns,
-    keys,
+    columns: mapped ? knownColumns : columns,
+    keys: mapped ? knownKeys : keys,
     rows,
     mapped,
   }

@@ -94,8 +94,8 @@ export function UploadPage() {
             <CardHeader>
               <CardTitle>업로드 안내</CardTitle>
               <CardDescription>
-                위쪽에 수시/학생부/수능 병합 헤더가 있어도, 학번·이름·대학이 있는 컬럼 행을 찾아
-                읽습니다. 중복되는 표준점수·백분위·등급은 국어/수학/탐구 위치대로 구분합니다.
+                위쪽에 학생/수시/학생부/수능 병합 헤더가 있어도, 학번·이름·지역·대학이 있는
+                컬럼 행을 찾아 읽습니다. 중복되는 표준점수·백분위·등급은 위치대로 구분합니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">

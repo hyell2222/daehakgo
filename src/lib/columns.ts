@@ -39,7 +39,7 @@ export type ColumnKey =
   | "mathStandard"
   | "mathPercentile"
   | "mathGrade"
-  | "mathGradeExtra"
+  | "englishGrade"
   | "inquirySection"
   | "inquiry1Subject"
   | "inquiry1Standard"
@@ -49,10 +49,11 @@ export type ColumnKey =
   | "inquiry2Standard"
   | "inquiry2Percentile"
   | "inquiry2Grade"
+  | "historyGrade"
   | "inquiry3Subject"
   | "inquiry3Grade"
 
-export type ColumnGroupId = "application" | "record" | "csat" | "extra"
+export type ColumnGroupId = "student" | "application" | "record" | "csat"
 
 export type ColumnAccent = "stage1" | "final" | "waitlist" | "enroll" | "note"
 
@@ -60,7 +61,7 @@ export type ColumnDef = {
   key: ColumnKey
   header: string
   label: string
-  group: Exclude<ColumnGroupId, "extra">
+  group: ColumnGroupId
   subgroup: string
   accent?: ColumnAccent
 }
@@ -69,6 +70,12 @@ export const COLUMN_GROUP_META: Record<
   ColumnGroupId,
   { title: string; headerClass: string; subHeaderClass: string; cellClass: string }
 > = {
+  student: {
+    title: "학생",
+    headerClass: "bg-zinc-200 text-zinc-900",
+    subHeaderClass: "bg-zinc-100 text-zinc-800",
+    cellClass: "bg-white",
+  },
   application: {
     title: "수시 지원 상황 및 결과",
     headerClass: "bg-[#5f9ea8] text-white",
@@ -87,12 +94,6 @@ export const COLUMN_GROUP_META: Record<
     subHeaderClass: "bg-[#f3e89a] text-zinc-800",
     cellClass: "bg-[#fbf8e8]",
   },
-  extra: {
-    title: "기타",
-    headerClass: "bg-zinc-500 text-white",
-    subHeaderClass: "bg-zinc-200 text-zinc-800",
-    cellClass: "bg-zinc-50",
-  },
 }
 
 export const COLUMN_ACCENT_CLASS: Record<ColumnAccent, { head: string; cell: string }> = {
@@ -103,15 +104,18 @@ export const COLUMN_ACCENT_CLASS: Record<ColumnAccent, { head: string; cell: str
   note: { head: "bg-[#d4d4d4] text-zinc-900", cell: "bg-[#f3f3f3]" },
 }
 
+const GPA_SUBGROUP = "교과영역(학기통합 평균등급)"
+const COMPARE_SUBGROUP = "합격에 영향을 준 내용을 입력해 주십시요."
+
 /**
- * 실제 엑셀 컬럼 순서. 지원시기는 원본에 없고 전형종류에서 파생합니다.
- * 중복 헤더(표준점수/백분위/등급 등)는 위치 기준으로 구분합니다.
+ * 실제 엑셀 3행 헤더 순서. 중복 헤더(표준점수/백분위/등급)는 위치 기준으로 구분합니다.
  */
 export const COLUMN_DEFS: ColumnDef[] = [
-  { key: "studentId", header: "학번", label: "학번", group: "application", subgroup: "" },
-  { key: "studentName", header: "이름", label: "이름", group: "application", subgroup: "" },
+  { key: "studentId", header: "학번", label: "학번", group: "student", subgroup: "" },
+  { key: "studentName", header: "이름", label: "이름", group: "student", subgroup: "" },
+  { key: "region", header: "지역", label: "지역", group: "application", subgroup: "" },
   { key: "university", header: "대학", label: "대학", group: "application", subgroup: "" },
-  { key: "region", header: "지역(소재지)", label: "지역(소재지)", group: "application", subgroup: "" },
+  { key: "period", header: "지원시기", label: "지원시기", group: "application", subgroup: "" },
   { key: "admissionName", header: "전형명", label: "전형명", group: "application", subgroup: "" },
   { key: "track", header: "계열", label: "계열", group: "application", subgroup: "" },
   { key: "major", header: "모집단위", label: "모집단위", group: "application", subgroup: "" },
@@ -128,17 +132,17 @@ export const COLUMN_DEFS: ColumnDef[] = [
   { key: "quota", header: "모집인원", label: "모집인원", group: "application", subgroup: "" },
   { key: "admissionCategory", header: "전형분류", label: "전형분류", group: "application", subgroup: "" },
   { key: "admissionMethod", header: "전형방법", label: "전형방법", group: "application", subgroup: "" },
-  { key: "gpaAll", header: "전과목", label: "전과목", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaKorMathEngSocSci", header: "국수영사과", label: "국수영사과", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaKorMathEngSoc", header: "국수영사", label: "국수영사", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaKorEngSci", header: "국영과", label: "국영과", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaKorMathEng", header: "국수영", label: "국수영", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaKorean", header: "국어", label: "국어", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaMath", header: "수학", label: "수학", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaEnglish", header: "영어", label: "영어", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaSocial", header: "사회", label: "사회", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaScience", header: "과학", label: "과학", group: "record", subgroup: "III. 교과학습발달상황" },
-  { key: "gpaCompare", header: "비교과", label: "비교과", group: "record", subgroup: "III. 교과학습발달상황" },
+  { key: "gpaAll", header: "전과목", label: "전과목", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaKorMathEngSocSci", header: "국수영사과", label: "국수영사과", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaKorMathEngSoc", header: "국수영사", label: "국수영사", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaKorEngSci", header: "국수영과", label: "국수영과", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaKorMathEng", header: "국수영", label: "국수영", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaKorean", header: "국어", label: "국어", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaMath", header: "수학", label: "수학", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaEnglish", header: "영어", label: "영어", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaSocial", header: "사회", label: "사회", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaScience", header: "과학", label: "과학", group: "record", subgroup: GPA_SUBGROUP },
+  { key: "gpaCompare", header: "비교과", label: "비교과", group: "record", subgroup: COMPARE_SUBGROUP },
   { key: "koreanSection", header: "국어영역", label: "국어영역", group: "csat", subgroup: "국어" },
   { key: "koreanStandard", header: "표준점수", label: "국어 표준점수", group: "csat", subgroup: "국어" },
   { key: "koreanPercentile", header: "백분위", label: "국어 백분위", group: "csat", subgroup: "국어" },
@@ -147,24 +151,24 @@ export const COLUMN_DEFS: ColumnDef[] = [
   { key: "mathStandard", header: "표준점수", label: "수학 표준점수", group: "csat", subgroup: "수학" },
   { key: "mathPercentile", header: "백분위", label: "수학 백분위", group: "csat", subgroup: "수학" },
   { key: "mathGrade", header: "등급", label: "수학 등급", group: "csat", subgroup: "수학" },
-  { key: "mathGradeExtra", header: "등급", label: "수학 추가등급", group: "csat", subgroup: "수학" },
-  { key: "inquirySection", header: "탐구영역", label: "탐구영역", group: "csat", subgroup: "탐구" },
-  { key: "inquiry1Subject", header: "과목명", label: "탐구1 과목", group: "csat", subgroup: "탐구" },
-  { key: "inquiry1Standard", header: "표준점수", label: "탐구1 표준점수", group: "csat", subgroup: "탐구" },
-  { key: "inquiry1Percentile", header: "백분위", label: "탐구1 백분위", group: "csat", subgroup: "탐구" },
-  { key: "inquiry1Grade", header: "등급", label: "탐구1 등급", group: "csat", subgroup: "탐구" },
-  { key: "inquiry2Subject", header: "과목명", label: "탐구2 과목", group: "csat", subgroup: "탐구" },
-  { key: "inquiry2Standard", header: "표준점수", label: "탐구2 표준점수", group: "csat", subgroup: "탐구" },
-  { key: "inquiry2Percentile", header: "백분위", label: "탐구2 백분위", group: "csat", subgroup: "탐구" },
-  { key: "inquiry2Grade", header: "등급", label: "탐구2 등급", group: "csat", subgroup: "탐구" },
-  { key: "inquiry3Subject", header: "과목명", label: "탐구3 과목", group: "csat", subgroup: "탐구" },
-  { key: "inquiry3Grade", header: "등급", label: "탐구3 등급", group: "csat", subgroup: "탐구" },
+  { key: "englishGrade", header: "등급", label: "영어 등급", group: "csat", subgroup: "영어" },
+  { key: "inquirySection", header: "탐구영역", label: "탐구영역", group: "csat", subgroup: "선택1" },
+  { key: "inquiry1Subject", header: "과목명", label: "선택1 과목", group: "csat", subgroup: "선택1" },
+  { key: "inquiry1Standard", header: "표준점수", label: "선택1 표준점수", group: "csat", subgroup: "선택1" },
+  { key: "inquiry1Percentile", header: "백분위", label: "선택1 백분위", group: "csat", subgroup: "선택1" },
+  { key: "inquiry1Grade", header: "등급", label: "선택1 등급", group: "csat", subgroup: "선택1" },
+  { key: "inquiry2Subject", header: "과목명", label: "선택2 과목", group: "csat", subgroup: "선택2" },
+  { key: "inquiry2Standard", header: "표준점수", label: "선택2 표준점수", group: "csat", subgroup: "선택2" },
+  { key: "inquiry2Percentile", header: "백분위", label: "선택2 백분위", group: "csat", subgroup: "선택2" },
+  { key: "inquiry2Grade", header: "등급", label: "선택2 등급", group: "csat", subgroup: "선택2" },
+  { key: "historyGrade", header: "등급", label: "한국사 등급", group: "csat", subgroup: "한국사" },
+  { key: "inquiry3Subject", header: "과목명", label: "제2외국어 과목", group: "csat", subgroup: "제2외국어" },
+  { key: "inquiry3Grade", header: "등급", label: "제2외국어 등급", group: "csat", subgroup: "제2외국어" },
 ]
 
-export const COLUMN_LABEL: Record<ColumnKey, string> = {
-  ...Object.fromEntries(COLUMN_DEFS.map((column) => [column.key, column.label])),
-  period: "지원시기",
-} as Record<ColumnKey, string>
+export const COLUMN_LABEL: Record<ColumnKey, string> = Object.fromEntries(
+  COLUMN_DEFS.map((column) => [column.key, column.label]),
+) as Record<ColumnKey, string>
 
 export const COLUMN_BY_KEY = Object.fromEntries(
   COLUMN_DEFS.map((column) => [column.key, column]),
@@ -186,9 +190,7 @@ export function looksLikeAdmissionHeader(headers: string[]) {
   const normalized = headers.map(normalizeHeader)
   const hasCore = normalized.includes("모집단위") && normalized.includes("최종")
   const withStudent = normalized[0] === "학번" && isNameHeader(normalized[1] ?? "")
-  const withoutStudent =
-    (isRegionHeader(normalized[0] ?? "") && normalized[1] === "대학") ||
-    (normalized[0] === "대학" && isRegionHeader(normalized[1] ?? ""))
+  const withoutStudent = isRegionHeader(normalized[0] ?? "") && normalized[1] === "대학"
   return hasCore && (withStudent || withoutStudent)
 }
 
@@ -208,23 +210,19 @@ export type ExcelColumnView = {
   accent?: ColumnAccent
 }
 
-export function excelColumnsForDataset(keys: string[], columns: string[]): ExcelColumnView[] {
-  return keys.map((key, index) => {
-    const def = COLUMN_BY_KEY[key as ColumnKey]
-    if (def) {
-      return {
-        key,
-        header: def.header,
-        group: def.group,
-        subgroup: def.subgroup,
-        accent: def.accent,
-      }
-    }
+export function isKnownColumnKey(key: string): key is ColumnKey {
+  return key in COLUMN_BY_KEY
+}
+
+export function excelColumnsForDataset(keys: string[]): ExcelColumnView[] {
+  return keys.filter(isKnownColumnKey).map((key) => {
+    const def = COLUMN_BY_KEY[key]
     return {
       key,
-      header: columns[index] ?? key,
-      group: "extra",
-      subgroup: "",
+      header: def.header,
+      group: def.group,
+      subgroup: def.subgroup,
+      accent: def.accent,
     }
   })
 }
