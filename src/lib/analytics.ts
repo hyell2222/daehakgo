@@ -35,13 +35,13 @@ export function classifyResult(value: unknown): ResultKind {
   if (!text) {
     return "blank"
   }
-  if (/불합|불합격|탈락|실패/.test(text)) {
+  if (/불합|불합격|탈락|실패|^불$/.test(text)) {
     return "fail"
   }
   if (/예비/.test(text)) {
     return "waitlist"
   }
-  if (/합격|충원|추가합/.test(text) || /^[Oo○●]$/.test(text)) {
+  if (/합격|충원|추가합|^합$/.test(text) || /^[Oo○●]$/.test(text)) {
     return "pass"
   }
   return "unknown"

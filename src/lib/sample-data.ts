@@ -61,10 +61,10 @@ export function createSampleDataset(): Dataset {
       const [region, university, major, track, admissionName, admissionCategory, period] = target
       const resultRoll = (student + slot) % 6
       const finalResult =
-        resultRoll <= 1 ? "합격" : resultRoll <= 3 ? "불합격" : resultRoll === 4 ? "예비" : "합격"
+        resultRoll <= 1 ? "합" : resultRoll <= 3 ? "불" : resultRoll === 4 ? "예비" : "합"
       const stage1 =
-        period === "정시" ? "" : resultRoll === 3 ? "불합격" : "합격"
-      const enroll = finalResult === "합격" ? (slot === 0 ? "등록" : "미등록") : ""
+        period === "정시" ? "" : resultRoll === 3 ? "불" : "합"
+      const enroll = finalResult === "합" ? (slot === 0 ? "등록" : "미등록") : ""
 
       const values: Record<string, string | number> = {
         studentId: String(30701 + student),
